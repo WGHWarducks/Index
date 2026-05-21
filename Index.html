@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Age of Sigmar - Faction Popularity with Full Legend</title>
+    <!-- Chart.js CDN for pie chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #101f1c 0%, #091418 100%);
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            padding: 30px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dashboard {
+            max-width: 1300px;
+            width: 100%;
+            background: rgba(20, 28, 32, 0.8);
+            backdrop-filter: blur(4px);
+            border-radius: 56px;
+            box-shadow: 0 30px 45px rgba(0,0,0,0.6), 0 1px 2px rgba(255,255,255,0.1);
+            padding: 28px 24px 36px 24px;
+        }
+
+        .title-section {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .title-section h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(120deg, #F5E7C8, #E0C285);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+
+        .subhead {
+            color: #bdd4e2;
+            background: rgba(0,0,0,0.4);
+            display: inline-block;
+            padding: 5px 18px;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .chart-legend-wrapper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .chart-box {
+            flex: 2;
+            min-width: 280px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 48px;
+            padding: 16px 12px 12px 12px;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .legend-box {
+            flex: 1.2;
+            min-width: 260px;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            border-radius: 40px;
+            padding: 20px 16px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.4);
+            border: 1px solid rgba(220, 190, 120, 0.3);
+        }
+
+        .legend-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #F5DEB3;
+            border-bottom: 2px solid #e6bc7e;
+            display: inline-block;
+            margin-bottom: 18px;
+            letter-spacing: -0.2px;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px 16px;
+            max-height: 480px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.85rem;
+            background: rgba(30, 40, 45, 0.6);
+            padding: 6px 10px;
+            border-radius: 60px;
+            transition: 0.1s ease;
+        }
+
+        .legend-color {
+            width: 22px;
+            height: 22px;
+            border-radius: 22px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,240,0.3);
+        }
+
+        .legend-text {
+            flex: 1;
+            font-weight: 500;
+            color: #ebdfc7;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .faction-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .faction-count {
+            background: #00000055;
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #ffeaac;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 28px;
+            gap: 15px;
+            background: rgba(0,0,0,0.45);
+            padding: 12px 22px;
+            border-radius: 60px;
+        }
+
+        .total-badge {
+            background: #2c5a49;
+            padding: 6px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            color: #f9efd6;
+        }
+
+        .note {
+            font-size: 0.75rem;
+            color: #9bb7c7;
+        }
+
+        canvas {
+            max-height: 400px;
+            width: 100%;
+            margin: 0 auto;
+            display: block;
+        }
+
+        @media (max-width: 800px) {
+            .dashboard {
+                padding: 20px;
+            }
+            .legend-grid {
+                grid-template-columns: 1fr;
+                max-height: 300px;
+            }
+            .legend-box {
+                min-width: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="title-section">
+        <h1>⚡ CONVERGENCE OF CHAMPIONS ⚡</h1>
+        <div class="subhead">WGH WarDucks & allies — Faction Popularity (26 players)</div>
+    </div>
+
+    <div class="chart-legend-wrapper">
+        <!-- PIE CHART SECTION -->
+        <div class="chart-box">
+            <canvas id="factionPieChart" width="600" height="400" style="width:100%; height:auto;"></canvas>
+        </div>
+
+        <!-- LEGEND SECTION: ALL FACTIONS + COUNTS -->
+        <div class="legend-box">
+            <div class="legend-title">📜 GRAND LEGEND</div>
+            <div class="legend-grid" id="dynamicLegend">
+                <!-- Filled via JavaScript to match colors and data exactly -->
+            </div>
+            <div style="margin-top: 16px; text-align: center; font-size: 0.7rem; color:#b9cfdd;">
+                ⚔️ Each color matches pie slice | click legend to toggle
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="total-badge">
+            🧙 TOTAL ARMIES: 26 verified entries
+        </div>
+        <div class="note">
+            🏆 Most popular: Sylvaneth (3) &nbsp;|&nbsp; 
+            🔥 Five factions with 2 players &nbsp;|&nbsp;
+            ✨ 13 solo factions
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ----- FACTION DATA (exactly 26 entries) -----
+        const factionsData = [
+            { name: "Sylvaneth", count: 3 },
+            { name: "Blades of Khorne", count: 2 },
+            { name: "Disciples of Tzeentch", count: 2 },
+            { name: "Stormcast Eternals", count: 2 },
+            { name: "Helsmiths of Hashut", count: 2 },
+            { name: "Slaves to Darkness", count: 2 },
+            { name: "Hedonites of Slaanesh", count: 1 },
+            { name: "Gloomspite Gitz", count: 1 },
+            { name: "Cities of Sigmar", count: 1 },
+            { name: "Ogor Mawtribes", count: 1 },
+            { name: "Lumineth Realm-Lords", count: 1 },
+            { name: "Ossiarch Bonereapers", count: 1 },
+            { name: "Nighthaunt", count: 1 },
+            { name: "Soulblight Gravelords", count: 1 },
+            { name: "Skaven", count: 1 },
+            { name: "Fyreslayers", count: 1 },
+            { name: "Daughters of Khaine", count: 1 },
+            { name: "Ironjawz", count: 1 },
+            { name: "Sons of Behemat", count: 1 }
+        ];
+
+        // Extract arrays for chart.js
+        const factionNames = factionsData.map(f => f.name);
+        const factionCounts = factionsData.map(f => f.count);
+        
+        // Custom color palette (vibrant, high contrast)
+        const colorPalette = [
+            '#6A9C78', '#C95D5D', '#4F9D9D', '#E3B87C', '#9B6A9C', '#5D7E9E', '#D9A13B',
+            '#AF6F4B', '#5A8F8C', '#CD9777', '#8F5E6E', '#6C8C5E', '#BF6F5A', '#6C7F9C',
+            '#C19A6B', '#937860', '#518073', '#B2815A', '#A3636B'
+        ];
+        
+        // Ensure colors length matches factions
+        const usedColors = colorPalette.slice(0, factionsData.length);
+        
+        // ----- RENDER PIE CHART -----
+        const ctx = document.getElementById('factionPieChart').getContext('2d');
+        const pieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: factionNames,
+                datasets: [{
+                    data: factionCounts,
+                    backgroundColor: usedColors,
+                    borderColor: 'rgba(0,0,0,0.25)',
+                    borderWidth: 1.8,
+                    hoverOffset: 15,
+                    spacing: 1.5,
+                    borderRadius: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: {
+                        backgroundColor: '#0E1C1E',
+                        titleColor: '#FCE7B2',
+                        bodyColor: '#E2E9F0',
+                        borderColor: '#DDB56C',
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a,b) => a + b, 0);
+                                const percent = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} player${value !== 1 ? 's' : ''} (${percent}%)`;
+                            }
+                        }
+                    },
+                    legend: {
+                        display: false   // We hide default legend and use custom legend grid
+                    },
+                    title: {
+                        display: true,
+                        text: '🎲 Faction Distribution — Pie Chart',
+                        color: '#EADABC',
+                        font: { size: 14, weight: 'bold' },
+                        padding: { bottom: 12 }
+                    }
+                },
+                layout: {
+                    padding: 12
+                },
+                animation: {
+                    animateScale: true,
+                    animateRotate: true,
+                    duration: 1000
+                }
+            }
+        });
+        
+        // ----- BUILD FULL CUSTOM LEGEND (explicit, with all factions & interactive toggle) -----
+        const legendContainer = document.getElementById('dynamicLegend');
+        
+        function buildLegend() {
+            legendContainer.innerHTML = '';
+            factionsData.forEach((faction, idx) => {
+                const color = usedColors[idx];
+                const count = faction.count;
+                const name = faction.name;
+                
+                // Create legend item div
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.style.cursor = 'pointer';
+                legendItem.setAttribute('data-index', idx);
+                
+                // Color swatch
+                const colorSpan = document.createElement('div');
+                colorSpan.className = 'legend-color';
+                colorSpan.style.backgroundColor = color;
+                colorSpan.style.border = '1px solid rgba(255,245,200,0.6)';
+                
+                // Text wrapper
+                const textSpan = document.createElement('div');
+                textSpan.className = 'legend-text';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'faction-name';
+                nameSpan.textContent = name;
+                
+                const countSpan = document.createElement('span');
+                countSpan.className = 'faction-count';
+                countSpan.textContent = `${count} player${count !== 1 ? 's' : ''}`;
+                
+                textSpan.appendChild(nameSpan);
+                textSpan.appendChild(countSpan);
+                
+                legendItem.appendChild(colorSpan);
+                legendItem.appendChild(textSpan);
+                
+                // Toggle slice visibility when clicking on legend item
+                legendItem.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const meta = pieChart.getDatasetMeta(0);
+                    const hidden = meta.data[idx].hidden;
+                    meta.data[idx].hidden = !hidden;
+                    // update visual feedback on legend item (opacity)
+                    if (!hidden) {
+                        legendItem.style.opacity = '0.5';
+                        legendItem.style.textDecoration = 'line-through';
+                    } else {
+                        legendItem.style.opacity = '1';
+                        legendItem.style.textDecoration = 'none';
+                    }
+                    pieChart.update();
+                });
+                
+                legendContainer.appendChild(legendItem);
+            });
+        }
+        
+        buildLegend();
+        
+        // Additional note: ensure that toggling works smoothly and initial states all visible
+        // also add a small reset hint in case of confusion
+        const resetHint = document.createElement('div');
+        resetHint.style.marginTop = '14px';
+        resetHint.style.fontSize = '0.7rem';
+        resetHint.style.textAlign = 'center';
+        resetHint.style.color = '#c7b88a';
+        resetHint.innerHTML = '💡 Tip: Click any faction in legend to hide/show its slice';
+        legendContainer.parentNode.appendChild(resetHint);
+        
+        // Final check: total players sum
+        const total = factionCounts.reduce((a,b) => a+b,0);
+        console.assert(total === 26, "Total players verified 26");
+    })();
+</script>
+</body>
+</html>
